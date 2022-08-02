@@ -45,6 +45,8 @@ from greykite.framework.templates.pickle_utils import load_obj
 from greykite.framework.templates.simple_silverkite_template import SimpleSilverkiteTemplate
 from greykite.framework.templates.template_interface import TemplateInterface
 from greykite.sklearn.estimator.one_by_one_estimator import OneByOneEstimator
+from greykite.framework.templates.gcp_utils import dump_obj_cloud
+from greykite.framework.templates.gcp_utils import load_obj_cloud
 
 
 class Forecaster:
@@ -362,6 +364,7 @@ class Forecaster:
     def dump_forecast_result(
             self,
             destination_dir,
+            bucket_name=None,
             object_name="object",
             dump_design_info=True,
             overwrite_exist_dir=False):
@@ -373,6 +376,8 @@ class Forecaster:
             The pickle destination directory.
         object_name : `str`
             The stored file name.
+        bucket_name :  `str`
+            GCP bucket name if utilizing cloud capabilities.
         dump_design_info : `bool`, default True
             Whether to dump design info.
             Design info is a patsy class that includes the design matrix information.
@@ -387,17 +392,27 @@ class Forecaster:
         """
         if self.forecast_result is None:
             raise ValueError("self.forecast_result is None, nothing to dump.")
-        dump_obj(
-            obj=self.forecast_result,
-            dir_name=destination_dir,
-            obj_name=object_name,
-            dump_design_info=dump_design_info,
-            overwrite_exist_dir=overwrite_exist_dir
-        )
+        if not bucket_name:
+            dump_obj(
+                obj=self.forecast_result,
+                dir_name=destination_dir,
+                obj_name=object_name,
+                dump_design_info=dump_design_info,
+                overwrite_exist_dir=overwrite_exist_dir
+            )
+        else: 
+            dump_obj_cloud(
+                obj=self.forecast_result,
+                dir_name=destination_dir,
+                bucket_name = bucket_name,
+                obj_name=object_name,
+                dump_design_info=dump_design_info,
+                overwrite_exist_dir=overwrite_exist_dir)
 
     def load_forecast_result(
             self,
             source_dir,
+            bucket_name=None,
             load_design_info=True):
         """Loads ``self.forecast_result`` from local files created by ``self.dump_result``.
 
@@ -405,6 +420,8 @@ class Forecaster:
         ----------
         source_dir : `str`
             The source file directory.
+        bucket_name :  `str`
+            GCP bucket name if utilizing cloud capabilities.
         load_design_info : `bool`, default True
             Whether to load design info.
             Design info is a patsy class that includes the design matrix information.
@@ -412,8 +429,16 @@ class Forecaster:
         """
         if self.forecast_result is not None:
             raise ValueError("self.forecast_result is not None, please create a new instance.")
-        self.forecast_result = load_obj(
-            dir_name=source_dir,
-            obj=None,
-            load_design_info=load_design_info
-        )
+        if not bucket_name:
+            self.forecast_result = load_obj(
+                dir_name=source_dir,
+                obj=None,
+                load_design_info=load_design_info
+            )
+        else:
+            self.forecast_result = load_obj_cloud(
+                dir_name=source_dir,
+                bucket_name = bucket_name,
+                obj=None,
+                load_design_info=load_design_info
+            )
